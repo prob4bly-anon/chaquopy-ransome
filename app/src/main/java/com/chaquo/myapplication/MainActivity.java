@@ -13,7 +13,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
-import android.app.Activity;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.chaquo.python.PyException;
 import com.chaquo.python.Python;
@@ -27,18 +29,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import java.io.PrintStream;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import android.os.Environment;
-import android.os.AsyncTask;
-import android.widget.Toast;
-import android.os.*;
-import android.util.*;
+public class MainActivity extends AppCompatActivity {
 
-public class MainActivity extends Activity {
-
-    private static final int REQUEST_STORAGE_PERMISSION = 100;
+    private static final int PERMISSION_REQUEST_CODE = 100;
 
     private TextView logTextView;
 
@@ -49,30 +42,26 @@ public class MainActivity extends Activity {
 
         logTextView = findViewById(R.id.logTextView);
 
-        requestPermissions();
-
-       
-    }
-	
-	private void requestPermissions(){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.WRITE_SETTINGS }, REQUEST_STORAGE_PERMISSION); 
-		}
+        // Request permissions if necessary
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
+			
+        } else {
+            exepy();
+        }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_STORAGE_PERMISSION){
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-  exepy();
-				}else{
-                Log.v("MAINACTIVITY", "Storage permission denied.");
-            }
+        if (requestCode == PERMISSION_REQUEST_CODE && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            exepy();
+        } else {
+            log("Permission denied. File operations won't work.");
         }
-	
-        
     }
+	
 	
     private void exepy() {
         // Start Python if necessary
@@ -80,20 +69,20 @@ public class MainActivity extends Activity {
             Python.start(new AndroidPlatform(this));
         }
 
- 
+        // Execute the Python script
+
 		try {
 			Python py = Python.getInstance();
 			PyObject object = py.getModule("main").callAttr("main"); // Assuming the main function is in main.py
 			final String output = object.toString();
-	/*PyObject sys = py.getModule("sys");
-	PyObject stdout = sys.stdout;  // This is the correct way to access stdout
-			final String capturedOutput = stdout.toString();
-			log("STDOUT\n" + capturedOutput);*/
-			log("STDOUT\n" + output);
+			log("OUTPUT: \n" + output);
 		} catch (Exception e) {
-			log("STDERR\n" + e.toString());
+			log("ERROR: \n" + e.toString());
 		}
-	}
+	}	
+
+
+
 	private void log(String message) {
 
 		logTextView.append(message + "\n");
